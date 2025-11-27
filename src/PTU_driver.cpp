@@ -301,6 +301,12 @@ private:
     duration_ms = 1;
   }
 
+  RCLCPP_INFO(
+    this->get_logger(),
+    "GET REQUEST DONE IN %d ms", duration_ms
+  );
+  
+
   long long min_interval_ms_ll = static_cast<long long>(std::ceil(duration_ms * 1.5));
   int min_interval_ms = static_cast<int>(min_interval_ms_ll);
 
