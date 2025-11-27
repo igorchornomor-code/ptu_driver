@@ -151,7 +151,7 @@ int ptu_reset_home(ptu_handle* h, cpi_reset_type type) { // R, RD, RE, RP, RT
 // W
 int ptu_set_step_mode(ptu_handle* h, cpi_stepmode stepmode) {
     uint16_t status;
-    return cpi_ptcmd(h->cer, &status, OP_PAN_STEP_GET, stepmode);
+    return cpi_ptcmd(h->cer, &status, OP_PAN_STEP_SET, stepmode);
 }
 
 
