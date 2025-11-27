@@ -184,9 +184,6 @@ public:
             resp->success = true;
         });
 
-    // PP SET
-    int ticks = 400;
-    ptu_set_pan_abs(handler, ticks);
   }
 
 private:
