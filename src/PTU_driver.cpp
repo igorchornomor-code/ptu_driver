@@ -79,19 +79,35 @@ public:
      * float 64 pan, float 64 tilt
      */
     publisher_get_pos_absolute = this->create_publisher<PositionMsg>("get_position_absolute", 10);
+    publisher_get_pos_relative = this->create_publisher<PositionMsg>("get_position_relative", 10);
+    publisher_get_speed_absolute = this->create_publisher<PositionMsg>("get_speed_absolute", 10);
+
+
     auto timer_callback_publish = [this]() -> void
       {
-        auto message = getCurrentPosition(handler);
-        publisher_get_pos_absolute->publish(message);
+        auto message1 = getCurrentPosition(handler);
+        publisher_get_pos_absolute->publish(message1);
+
+        auto message2 = getPositionRelative(handler);
+        publisher_get_pos_relative->publish(message2);
+
+        auto message3 = getSpeedAbsolute(handler);
+        publisher_get_speed_absolute->publish(message3);
       };
     timer_publish = this->create_wall_timer(TIME_INTERVAL, timer_callback_publish);
 
 
-    auto topic_set_pos_abs = [this](const PositionMsg::SharedPtr msg) -> void { setPositionAbsolute(msg); };
+    auto topic_set_pos_abs = [this](const PositionMsg::SharedPtr msg)
+      -> void { setPositionAbsolute(msg); };
     subscription_set_pos_absolute = this->create_subscription<PositionMsg>("set_position_absolute", 10, topic_set_pos_abs);
 
-    auto topic_set_pos_rel = [this](const PositionMsg::SharedPtr msg) -> void { setPositionRelative(msg); };
+    auto topic_set_pos_rel = [this](const PositionMsg::SharedPtr msg)
+      -> void { setPositionRelative(msg); };
     subscription_set_pos_relative = this->create_subscription<PositionMsg>("set_position_relative", 10, topic_set_pos_rel);
+
+    auto topic_set_speed_abs = [this](const PositionMsg::SharedPtr msg)
+      -> void { setSpeedAbsolute(msg); };
+    subscription_set_speed_absolute = this->create_subscription<PositionMsg>("set_speed_absolute", 10, topic_set_speed_abs);
 
 
 
@@ -111,12 +127,47 @@ public:
             resp->success = true;
         });
 
+    
+    srv_control_mode_get_ = this->create_service<std_srvs::srv::Trigger>(
+        "get_control_mode",
+        [this](
+        const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+        std::shared_ptr<std_srvs::srv::Trigger::Response> resp) {
+          int mode_out = 0;
+          int ret = ptu_get_control_mode(handler, &mode_out);
+
+          if (ret != 0) {
+            resp->success = false;
+            resp->message = "Failed to read control mode";
+            return;
+          }
+
+          std::string message;
+          switch (mode_out) {
+              case 1: {
+                message = "PTU is in control mode";
+                break;
+              }
+              case 2: {
+                message = "PTU is in velocity mode";
+                break;
+              }
+              default: {
+                message = "PTU control mode: " + std::to_string(mode_out);
+                break;
+              }
+          }
+          resp->success = true;
+          resp->message = message;
+        });
+
     srv_step_mode_ = this->create_service<ptu_messages::srv::SetStepmode>(
         "set_step_mode",
         [this](
             const std::shared_ptr<ptu_messages::srv::SetStepmode::Request> req,
             std::shared_ptr<ptu_messages::srv::SetStepmode::Response> resp) {
             step_mode = (cpi_stepmode)req->step_mode;
+
             ptu_set_step_mode(handler, step_mode);
             ptu_reset_home(handler, CPI_RESET_ALL);
             ptu_await(handler);
@@ -146,10 +197,15 @@ private:
   rclcpp::TimerBase::SharedPtr timer_publish;
   
   rclcpp::Publisher<PositionMsg>::SharedPtr publisher_get_pos_absolute;
+  rclcpp::Publisher<PositionMsg>::SharedPtr publisher_get_pos_relative;
+  rclcpp::Publisher<PositionMsg>::SharedPtr publisher_get_speed_absolute;
+
   rclcpp::Subscription<PositionMsg>::SharedPtr subscription_set_pos_absolute;
   rclcpp::Subscription<PositionMsg>::SharedPtr subscription_set_pos_relative;
+  rclcpp::Subscription<PositionMsg>::SharedPtr subscription_set_speed_absolute;
 
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr srv_control_mode_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_control_mode_get_;
   rclcpp::Service<ptu_messages::srv::SetStepmode>::SharedPtr srv_step_mode_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_reset_home_;
 
@@ -236,6 +292,8 @@ private:
 
   auto start = steady_clock::now();
   (void)getCurrentPosition(handler);
+  (void)getPositionRelative(handler);
+  (void)getSpeedAbsolute(handler);
   auto end = steady_clock::now();
 
   auto duration_ms = duration_cast<milliseconds>(end - start).count();
@@ -270,19 +328,14 @@ private:
     {
       curPTPosition.pan = ticks;
       message.pan = static_cast<double>(ticks);
-    }
-    else
-    {
+    } else {
       message.pan = 0.0;
     }
 
-    if (ptu_get_tilt_pos(h, &ticks) == 0)
-    {
+    if (ptu_get_tilt_pos(h, &ticks) == 0) {
       curPTPosition.tilt = ticks;
       message.tilt = static_cast<double>(ticks);
-    }
-    else
-    {
+    } else {
       message.tilt = 0.0;
     }
 
@@ -290,6 +343,57 @@ private:
     message.tilt = convertStepsToAngle(message.tilt, "tilt");
     return message;
   }
+
+
+  PositionMsg getPositionRelative(ptu_handle* h)
+  {
+    auto message = ptu_messages::msg::Position();
+
+    int ticks;
+    if (ptu_get_pan_pos_rel(h, &ticks) == 0)
+    {
+      message.pan = static_cast<double>(ticks);
+    } else {
+      message.pan = 0.0;
+    }
+
+    if (ptu_get_tilt_pos_rel(h, &ticks) == 0) {
+      message.tilt = static_cast<double>(ticks);
+    } else {
+      message.tilt = 0.0;
+    }
+
+    message.pan = convertStepsToAngle(message.pan, "pan");
+    message.tilt = convertStepsToAngle(message.tilt, "tilt");
+    return message;
+  }
+
+  PositionMsg getSpeedAbsolute(ptu_handle* h)
+  {
+    auto message = ptu_messages::msg::Position();
+
+    int ticks_per_s_out = 0;
+    if (ptu_get_pan_vel(h, &ticks_per_s_out) == 0)
+    {
+      message.pan = static_cast<double>(ticks_per_s_out);
+    } else {
+      message.pan = 0.0;
+    }
+
+    if (ptu_get_tilt_vel(h, &ticks_per_s_out) == 0) {
+      message.tilt = static_cast<double>(ticks_per_s_out);
+    } else {
+      message.tilt = 0.0;
+    }
+
+    message.pan = convertStepsToAngle(message.pan, "pan");
+    message.tilt = convertStepsToAngle(message.tilt, "tilt");
+    return message;
+  }
+
+
+
+
 
   void setPositionAbsolute(PositionMsg::SharedPtr msg) {
     int panInSteps = 0;
@@ -333,6 +437,41 @@ private:
 
     ptu_set_pan_rel(handler, panInSteps);
     ptu_set_tilt_rel(handler, tiltInSteps);
+  }
+
+
+
+  void setSpeedAbsolute(PositionMsg::SharedPtr msg) {
+    int pan_ticks_per_s = 0;
+    int tilt_ticks_per_s = 0;
+
+    if (std::isnan(msg->pan)) {
+      pan_ticks_per_s = curPTPosition.pan;
+    }
+    else {
+      pan_ticks_per_s = convertAngleToSteps(msg->pan, "pan");
+    }
+
+    if (std::isnan(msg->tilt)) {
+      tilt_ticks_per_s = curPTPosition.tilt;
+    }
+    else {
+      tilt_ticks_per_s = convertAngleToSteps(msg->tilt, "tilt");
+    }
+
+    if (ptu_set_pan_vel(handler, pan_ticks_per_s) != 0) {
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Failed to set pan speed: %.5f! \nProbably the given value is outside the speed bounds.", msg->pan
+      );
+    }
+
+    if (ptu_set_tilt_vel(handler, tilt_ticks_per_s) != 0) {
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Failed to set tilt speed: %.5f! \nProbably the given value is outside the speed bounds.", msg->tilt
+      );
+    }
   }
 
 

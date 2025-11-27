@@ -17,15 +17,13 @@ The node:
 ## Repository Layout (relevant parts)
 
 ```text
-ros-2-ptu-control-unit/
-  src/
+ptu_driver/
+  include/
     ptu_driver/
-      include/
-        ptu_driver/
-          ptu_sdk.h          # C wrapper around vendor SDK
-        sdk-2.0.4/           # FLIR PTU SDK (C)
-      src/
-        PTU_driver.cpp  # main PTU_driver node (shown in the snippet)
+      ptu_sdk.h          # C wrapper around vendor SDK
+    sdk-2.0.4/           # FLIR PTU SDK (C)
+  src/
+    PTU_driver.cpp  # main PTU_driver node (shown in the snippet)
 ```
 
 ## Build Instructions
@@ -35,7 +33,7 @@ ros-2-ptu-control-unit/
 From repo root:
 
 ```
-cd src/ptu_driver/include/sdk-2.0.4
+cd ptu_driver/include/sdk-2.0.4
 make
 ```
 
@@ -46,9 +44,9 @@ Build the ROS 2 workspace
 From the root of the workspace:
 
 ```
-cd <path-to>/ros-2-ptu-control-unit
+cd <path-to>/ros-2-ws
 colcon build
-source install/local_setup.bash
+source install/setup.bash
 ```
 
 ## Running the Node
