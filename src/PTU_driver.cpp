@@ -133,6 +133,7 @@ public:
         [this](
         const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
         std::shared_ptr<std_srvs::srv::Trigger::Response> resp) {
+          (void)req;
           int mode_out = 0;
           int ret = ptu_get_control_mode(handler, &mode_out);
 
@@ -281,44 +282,44 @@ private:
   }
 
   int computeSafeIntervalMs(int requested_ms)
-{
-  using namespace std::chrono;
-  if (requested_ms <= 0) {
-    requested_ms = 1;
-  }
+  {
+    using namespace std::chrono;
+    if (requested_ms <= 0) {
+      requested_ms = 1;
+    }
 
-  auto start = steady_clock::now();
-  (void)getCurrentPosition(handler);
-  (void)getPositionRelative(handler);
-  (void)getSpeedAbsolute(handler);
-  auto end = steady_clock::now();
+    auto start = steady_clock::now();
+    (void)getCurrentPosition(handler);
+    (void)getPositionRelative(handler);
+    (void)getSpeedAbsolute(handler);
+    auto end = steady_clock::now();
 
-  auto duration_ms = duration_cast<milliseconds>(end - start).count();
-  if (duration_ms <= 0) {
-    duration_ms = 1;
-  }
+    auto duration_ms = duration_cast<milliseconds>(end - start).count();
+    if (duration_ms <= 0) {
+      duration_ms = 1;
+    }
 
-  RCLCPP_INFO(
-    this->get_logger(),
-    "GET REQUEST DONE IN %d ms", duration_ms
-  );
-  
-
-  long long min_interval_ms_ll = static_cast<long long>(std::ceil(duration_ms * 1.5));
-  int min_interval_ms = static_cast<int>(min_interval_ms_ll);
-
-  if (requested_ms < min_interval_ms) {
-    RCLCPP_WARN(
+    RCLCPP_INFO(
       this->get_logger(),
-      "Requested time_interval=%d ms is too small. "
-      "getCurrentPosition() took %lld ms, using %d ms instead.",
-      requested_ms, duration_ms, min_interval_ms
+      "GET REQUEST DONE IN %ld ms", duration_ms
     );
-    return min_interval_ms;
-  }
+    
 
-  return requested_ms;
-}
+    long long min_interval_ms_ll = static_cast<long long>(std::ceil(duration_ms * 1.5));
+    int min_interval_ms = static_cast<int>(min_interval_ms_ll);
+
+    if (requested_ms < min_interval_ms) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "Requested time_interval=%d ms is too small. "
+        "getCurrentPosition() took %ld ms, using %d ms instead.",
+        requested_ms, duration_ms, min_interval_ms
+      );
+      return min_interval_ms;
+    }
+
+    return requested_ms;
+  }
 
 
 
