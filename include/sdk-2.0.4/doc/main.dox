@@ -1,0 +1,68 @@
+/**
+
+\mainpage Getting Started
+
+\section Compiling Compiling
+
+For makefile based systems (Linux or Windows with MinGW), type \c make in the
+root SDK directory. The SDK will build into a static library named \c libcpi.a
+followed by every example program.
+
+Visual Studio users should open the VS Solution (.sln file) found in
+\c build/visual_studio_2008. Building the SDK Solution will build a static
+library, a dynamic library, some select examples, and a C# interface to the
+dynamic library.
+
+
+\section Running Running the Examples
+
+Example programs are located in the \c examples directory. They are command
+line programs that require at least one parameter: the port option (\c -p). A
+serial port or TCP connection can be specified with this option.
+
+<pre>
+$ examples/version -p /dev/ttyUSB0
+[*] D300 #2162 running 3.3.0
+$ examples/version -p tcp:10.17.3.61
+[*] D300 #2162 running 3.3.0
+</pre>
+
+
+\section UsingSDK Using the SDK
+
+The quickest way to get started is to copy and modify an example to learn how
+the SDK works. For makefile based systems, copy an example with a different
+base name and run \c make. Visual Studio users will need to make a new project
+within the provided Solution.
+
+<pre>
+$ cd examples
+$ cp version.c mytestprog.c
+$ make
+gcc -g -Wall -Werror -DLITTLE_ENDIAN -I.. -I../cerial  -L.. -o mytestprog mytestprog.c estrap.o -lcpi  -lm
+$ ./mytestprog -p /dev/ttyUSB0
+[*] D300 #2162 running 3.3.0
+</pre>
+
+At this point we have a verified compiling program that's ready for editing and
+testing.
+
+There are two main components to the SDK: an I/O abstraction layer called
+Cerial and the SDK core. Their primary interfaces are respectively located in
+cerial.c and cpi.c. These two components can work together or operate
+independently. estrap.c, the boot strapping code for examples, shows how these
+two components work together.
+
+\section Reading Further Reading
+
+It is highly recommended to read through the Command Reference Manual.
+Understanding how the PTU works with the ASCII interface is important towards
+using and understanding the SDK. Use the \ref opxref "Opcode Cross-Reference"
+when translating ASCII command knowledge into SDK function calls. Additionally,
+the \ref opgen program is provided to assist generating SDK command calls.
+
+Further details are documented in <a href="pages.html">Related Pages</a> and
+in the <a href="README.html">README</a> file.
+
+*/
+

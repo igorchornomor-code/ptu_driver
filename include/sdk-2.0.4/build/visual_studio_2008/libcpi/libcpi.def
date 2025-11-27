@@ -1,0 +1,27 @@
+LIBRARY	"libcpi"
+EXPORTS
+    cpi_resync
+    cpi_vpack
+    cpi_vunpack
+    cpi_pack
+    cpi_unpack
+    cpi_vsend
+    cpi_vrecv
+    cpi_send
+    cpi_recv
+    cpi_ptcmd
+    cpi_block_until
+    cpi_ch_write
+    cpi_ch_read
+    cpi_strerror
+    cpi_version
+    cpi_version_str
+    ceropen
+    cerread
+    cerwrite
+    cerioctl
+    cerclose
+    cerstrerror
+    cerputc
+    cergetc
+    cerblockwrite

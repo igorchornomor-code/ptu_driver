@@ -1,0 +1,64 @@
+/**
+
+\page Optable Optable
+
+The opcode table (\ref cpi_optable) is a table of opcodes, their arguments, and
+their returns. Every entry is a cpi_opent structure that contains the opcode
+(cpi_opent.op), a return specification (cpi_opent.retspec), and an argument
+specification (cpi_opent.argspec).
+
+The opcode specifies the command to execute. Use the \ref opxref
+"Opcode Cross-Reference" and the Command Reference Manual to look up details
+on what a specific opcode does.
+
+The argument and return specification is a C string that specifies, in
+left-to-right order, the type of the arguments and returns. These types are
+defined as:
+
+<table>
+<tr><th>Type</th><th>Character</th><th>Define</th></tr>
+<tr><td>Integer</td><td>i</td><td>\ref CPI_T_INT</td></tr>
+<tr><td>Unsigned Integer</td><td>u</td><td>\ref CPI_T_UNSIGNED</td></tr>
+<tr><td>Double</td><td>d</td><td>\ref CPI_T_DOUBLE</td></tr>
+<tr><td>String</td><td>s</td><td>\ref CPI_T_STR</td></tr>
+<tr><td>Enumeration</td><td>e</td><td>\ref CPI_T_ENUM</td></tr>
+<tr><td>Binary String</td><td>b</td><td>\ref CPI_T_BINARY</td></tr>
+</table>
+
+Enumerations and binary strings are wire-coded as integers and strings
+respectfully. They have their own type only for marshaling purposes.
+
+
+\section OptableCodeGeneration Code Generation
+
+The \ref opgen program will generate code examples. If you do not know how to
+interpret cpi_optable entries, then use opgen's code stub output.
+
+
+\section OptableExamples Examples
+
+\subsection OptableExamplePPSet OP_PAN_DESIRED_POS_SET
+
+OP_PAN_CURRENT_POS_SET has an argument specification of "i" and an empty
+return specification. This means it requires a single integer with no returns.
+
+\code
+int position = 200;
+
+cpi_ptcmd(cer, &status, OP_PAN_DESIRED_POS_SET, position);
+\endcode
+
+
+\subsection OptableExamplePPGet OP_PAN_CURRENT_POS_GET
+
+OP_PAN_CURRENT_POS_GET has a return specification of "i" and an empty argument
+specification. This means it returns a single integer with no arguments.
+
+\code
+int position;
+
+cpi_ptcmd(cer, &status, OP_PAN_CURRENT_POS_GET, &position);
+\endcode
+
+*/
+

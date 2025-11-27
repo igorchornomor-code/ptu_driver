@@ -1,0 +1,49 @@
+/**
+
+\page Porting Porting
+
+Porting can be a daunting task, but it doesn't need to be unnecessarily
+difficult. This page covers the basics of porting the MCS SDK.
+
+
+\section PortingEndianness Endianness
+
+\ref Framing "Framed data" is read and written in big-endian order. The SDK
+includes provisions for endian conversion in cpi_encode() and cpi_decode().
+If your target machine is little-endian ordered, then define LITTLE_ENDIAN when
+building the SDK. If your target machine is big-endian, then undef
+LITTLE_ENDIAN instead.
+
+
+\section PortingCerial Cerial
+
+Cerial is the SDK's I/O abstraction layer. If your target system does not
+support any of the included I/O drivers, then you'll need to write your own.
+Unsupported driver references should be removed from cerial.c and from your
+build system.
+
+Every Cerial driver exports a cerial_driver structure filled with I/O
+and I/O control functions. This structure is then referred to in ceropen() when
+opening an I/O device.
+
+Some IOCTL requests are required for correct behavior. Refer to
+\ref cerial_ioctls "the Cerial IOCTL requests page" for details.
+
+
+\section PortingAssumtions Assumptions
+
+\subsection PAIntegers Integers
+
+Integers are assumed to be in two's complement format.
+
+\subsection PADoubles Doubles
+
+Doubles are assumed to be in IEEE 754 format. Only normalized real doubles
+should be transmitted on the wire.
+
+\subsection PAStrings Strings
+
+Strings are expected to be NUL-terminated ASCII strings.
+
+*/
+

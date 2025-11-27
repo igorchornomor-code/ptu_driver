@@ -1,0 +1,29 @@
+/**
+
+\page opgen Opgen
+
+\c opgen is a helper program included with the SDK. Its purpose is to provide
+code generation and other run-time assistance. Only code generation for
+executing a command is available at the moment.
+
+\section opgenGenerate Opcode Command Generation
+
+\c opgen can generate a code stub based on a provided opcode. The command
+switch is \c -g and takes an opcode name.
+
+<pre>
+$ ./opgen -g OP_PAN_CURRENT_POS_GET
+int ptu_command(cerialh cer, uint16_t *status){
+    int rc;
+    int a;
+
+    rc = cpi_ptcmd(cer, &status, OP_PAN_CURRENT_POS_GET, &a);
+
+    /* XXX: do something with OP_PAN_CURRENT_POS_GET's return values */
+
+    return rc;
+}
+</pre>
+
+*/
+
