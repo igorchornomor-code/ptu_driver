@@ -176,7 +176,6 @@ public:
         }
 
         step_mode = static_cast<cpi_stepmode>(req->step_mode);
-        RCLCPP_INFO(this->get_logger(), "Requested step_mode=%d", req->step_mode);
 
         int rc = ptu_set_step_mode(handler, step_mode);
         if (rc != 0) {
@@ -193,12 +192,6 @@ public:
         }
 
         rc = ptu_await(handler);
-        if (rc != 0) {
-          RCLCPP_ERROR(this->get_logger(), "ptu_await failed, rc=%d", rc);
-          resp->success = false;
-          return;
-        }
-
         resp->success = true;
     });
 
