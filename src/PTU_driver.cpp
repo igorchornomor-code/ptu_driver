@@ -162,18 +162,46 @@ public:
           resp->message = message;
         });
 
-    srv_step_mode_ = this->create_service<ptu_messages::srv::SetStepmode>(
-        "set_step_mode",
-        [this](
-            const std::shared_ptr<ptu_messages::srv::SetStepmode::Request> req,
-            std::shared_ptr<ptu_messages::srv::SetStepmode::Response> resp) {
-            step_mode = (cpi_stepmode)req->step_mode;
 
-            ptu_set_step_mode(handler, step_mode);
-            ptu_reset_home(handler, CPI_RESET_ALL);
-            ptu_await(handler);
-            resp->success = true;
-        });
+  srv_step_mode_ = this->create_service<ptu_messages::srv::SetStepmode>(
+    "set_step_mode",
+    [this](
+        const std::shared_ptr<ptu_messages::srv::SetStepmode::Request> req,
+        std::shared_ptr<ptu_messages::srv::SetStepmode::Response> resp) {
+
+        if (!handler) {
+          RCLCPP_ERROR(this->get_logger(), "set_step_mode called with null handler");
+          resp->success = false;
+          return;
+        }
+
+        step_mode = static_cast<cpi_stepmode>(req->step_mode);
+        RCLCPP_INFO(this->get_logger(), "Requested step_mode=%d", req->step_mode);
+
+        int rc = ptu_set_step_mode(handler, step_mode);
+        if (rc != 0) {
+          RCLCPP_ERROR(this->get_logger(), "ptu_set_step_mode failed, rc=%d", rc);
+          resp->success = false;
+          return;
+        }
+
+        rc = ptu_reset_home(handler, CPI_RESET_ALL);
+        if (rc != 0) {
+          RCLCPP_ERROR(this->get_logger(), "ptu_reset_home failed, rc=%d", rc);
+          resp->success = false;
+          return;
+        }
+
+        rc = ptu_await(handler);
+        if (rc != 0) {
+          RCLCPP_ERROR(this->get_logger(), "ptu_await failed, rc=%d", rc);
+          resp->success = false;
+          return;
+        }
+
+        resp->success = true;
+    });
+
 
     srv_reset_home_ = this->create_service<std_srvs::srv::Trigger>(
         "reset_home",
