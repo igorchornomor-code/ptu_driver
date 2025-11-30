@@ -148,18 +148,18 @@ public:
 
           std::string message;
           switch (mode_out) {
-          case 1: {
-            message = "PTU is in control mode";
-            break;
-          }
-          case 2: {
-            message = "PTU is in velocity mode";
-            break;
-          }
-          default: {
-            message = "PTU control mode: " + std::to_string(mode_out);
-            break;
-          }
+            case 1: {
+              message = "PTU is in control mode";
+              break;
+            }
+            case 2: {
+              message = "PTU is in velocity mode";
+              break;
+            }
+            default: {
+              message = "PTU control mode: " + std::to_string(mode_out);
+              break;
+            }
           }
           resp->success = true;
           resp->message = message;
@@ -180,7 +180,7 @@ public:
 
           step_mode = static_cast<cpi_stepmode>(req->step_mode);
           if (step_mode < 0 || step_mode > 3) {
-            RCLCPP_ERROR(this->get_logger(), "BAD REQUEST: requested stepmode %d, but supported are: 0, 1, 2, 3", step_mode);
+            RCLCPP_ERROR(this->get_logger(), "BAD REQUEST: requested stepmode was %d, but supported are: 0, 1, 2, 3", step_mode);
             resp->success = false;
             return;
           }
@@ -222,6 +222,13 @@ public:
 
   }
 
+  ~PTU_driver() override {
+    if (handler) {
+      ptu_close(handler);
+      handler = nullptr;
+    }
+  } 
+
 private:
   struct PTPosition {
     int pan;
@@ -257,7 +264,10 @@ private:
     int tilt_min;
     int tilt_max;
   };
-
+  enum class Axis {
+    PAN,
+    TILT
+  };
   /*
     * ABOUT "eighth" STEP MODE
     * See "E Series ISM Manual_3.21.pdf", page 9
@@ -287,9 +297,9 @@ private:
 
 
 
-  double getStepSize(const std::string& axis) const
+  double getStepSize(const Axis& axis) const
   {
-    if (axis == "pan")
+    if (axis == Axis::PAN)
     {
       auto it = panStepSize.find(step_mode);
       if (it != panStepSize.end())
@@ -297,7 +307,7 @@ private:
         return it->second;
       }
     }
-    else if (axis == "tilt")
+    else if (axis == Axis::TILT)
     {
       auto it = tiltStepSize.find(step_mode);
       if (it != tiltStepSize.end())
@@ -306,22 +316,28 @@ private:
       }
     }
 
-    std::cerr << "Invalid axis or step mode: " << axis << ", " << step_mode << std::endl;
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "Invalid axis or step mode: ", axis
+    );
     return 0.0;
   }
 
-  int convertAngleToSteps(double angle, std::string axis)
+  int convertAngleToSteps(double angle, Axis axis)
   {
-    if (axis != "pan" && axis != "tilt")
+    if (axis != Axis::PAN && axis != Axis::PAN)
     {
-      std::cerr << "Invalid axis:" << axis << std::endl;
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "Invalid axis: ", axis
+      );
       return 12345678;
     }
     int steps = round(angle / getStepSize(axis));
     return steps;
   }
 
-  double convertStepsToAngle(double steps, std::string axis)
+  double convertStepsToAngle(double steps, Axis axis)
   {
     double angle = steps * getStepSize(axis);
     return angle;
@@ -336,7 +352,6 @@ private:
 
     auto start = steady_clock::now();
     (void)getCurrentPosition(handler);
-    (void)getPositionRelative(handler);
     (void)getSpeedAbsolute(handler);
     auto end = steady_clock::now();
 
@@ -391,8 +406,8 @@ private:
       message.tilt = 0.0;
     }
 
-    message.pan = convertStepsToAngle(message.pan, "pan");
-    message.tilt = convertStepsToAngle(message.tilt, "tilt");
+    message.pan = convertStepsToAngle(message.pan, Axis::PAN);
+    message.tilt = convertStepsToAngle(message.tilt, Axis::TILT);
     return message;
   }
 
@@ -417,8 +432,8 @@ private:
       message.tilt = 0.0;
     }
 
-    message.pan = convertStepsToAngle(message.pan, "pan");
-    message.tilt = convertStepsToAngle(message.tilt, "tilt");
+    message.pan = convertStepsToAngle(message.pan, Axis::PAN);
+    message.tilt = convertStepsToAngle(message.tilt, Axis::TILT);
     return message;
   }
 
@@ -444,8 +459,8 @@ private:
       message.tilt = 0.0;
     }
 
-    message.pan = convertStepsToAngle(message.pan, "pan");
-    message.tilt = convertStepsToAngle(message.tilt, "tilt");
+    message.pan = convertStepsToAngle(message.pan, Axis::PAN);
+    message.tilt = convertStepsToAngle(message.tilt, Axis::TILT);
     return message;
   }
 
@@ -458,28 +473,28 @@ private:
     int tiltInSteps = 0;
 
     if (std::isnan(msg->pan)) {
-      panInSteps = curPTSpeed.pan;
+      panInSteps = curPTPosition.pan;
     }
     else {
-      panInSteps = convertAngleToSteps(msg->pan, "pan");
+      panInSteps = convertAngleToSteps(msg->pan, Axis::PAN);
     }
 
     if (std::isnan(msg->tilt)) {
-      tiltInSteps = curPTSpeed.tilt;
+      tiltInSteps = curPTPosition.tilt;
     }
     else {
-      tiltInSteps = convertAngleToSteps(msg->tilt, "tilt");
+      tiltInSteps = convertAngleToSteps(msg->tilt, Axis::TILT);
     }
 
     if (ptu_set_pan_abs(handler, panInSteps) != 0) {
-      RCLCPP_INFO(
+      RCLCPP_ERROR(
         this->get_logger(),
         "Failed to set absolute position pan: %.5f!\nProbably the given value is outside the position bounds.", msg->pan
       );
     }
 
     if (ptu_set_tilt_abs(handler, tiltInSteps) != 0) {
-      RCLCPP_INFO(
+      RCLCPP_ERROR(
         this->get_logger(),
         "Failed to set absolute position tilt: %.5f!\nProbably the given value is outside the position bounds.", msg->tilt
       );
@@ -494,26 +509,26 @@ private:
       panInSteps = 0;
     }
     else {
-      panInSteps = convertAngleToSteps(msg->pan, "pan");
+      panInSteps = convertAngleToSteps(msg->pan, Axis::PAN);
     }
 
     if (std::isnan(msg->tilt)) {
       tiltInSteps = 0;
     }
     else {
-      tiltInSteps = convertAngleToSteps(msg->tilt, "tilt");
+      tiltInSteps = convertAngleToSteps(msg->tilt, Axis::TILT);
     }
 
 
     if (ptu_set_pan_rel(handler, panInSteps) != 0) {
-      RCLCPP_INFO(
+      RCLCPP_ERROR(
         this->get_logger(),
         "Failed to set relative position pan: %.5f!\nProbably the given value is outside the position bounds.", msg->pan
       );
     }
 
     if (ptu_set_tilt_rel(handler, tiltInSteps) != 0) {
-      RCLCPP_INFO(
+      RCLCPP_ERROR(
         this->get_logger(),
         "Failed to set relative position tilt: %.5f!\nProbably the given value is outside the position bounds.", msg->tilt
       );
@@ -527,28 +542,28 @@ private:
     int tilt_ticks_per_s = 0;
 
     if (std::isnan(msg->pan)) {
-      pan_ticks_per_s = curPTPosition.pan;
+      pan_ticks_per_s = curPTSpeed.pan;
     }
     else {
-      pan_ticks_per_s = convertAngleToSteps(msg->pan, "pan");
+      pan_ticks_per_s = convertAngleToSteps(msg->pan, Axis::PAN);
     }
 
     if (std::isnan(msg->tilt)) {
-      tilt_ticks_per_s = curPTPosition.tilt;
+      tilt_ticks_per_s = curPTSpeed.tilt;
     }
     else {
-      tilt_ticks_per_s = convertAngleToSteps(msg->tilt, "tilt");
+      tilt_ticks_per_s = convertAngleToSteps(msg->tilt, Axis::TILT);
     }
 
     if (ptu_set_pan_vel(handler, pan_ticks_per_s) != 0) {
-      RCLCPP_INFO(
+      RCLCPP_ERROR(
         this->get_logger(),
         "Failed to set pan speed: %.5f!\nProbably the given value is outside the speed bounds.", msg->pan
       );
     }
 
     if (ptu_set_tilt_vel(handler, tilt_ticks_per_s) != 0) {
-      RCLCPP_INFO(
+      RCLCPP_ERROR(
         this->get_logger(),
         "Failed to set tilt speed: %.5f!\nProbably the given value is outside the speed bounds.", msg->tilt
       );

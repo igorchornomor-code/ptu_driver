@@ -45,22 +45,26 @@ void ptu_close(ptu_handle* h) { // close connection
 
 // PP, TP
 int ptu_get_pan_pos(ptu_handle* h,  int* ticks_out) { // PP GET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_PAN_CURRENT_POS_GET, ticks_out);
 }
 
 int ptu_set_pan_abs(ptu_handle* h,  int ticks) { // PP SET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_PAN_DESIRED_POS_SET, ticks);
 }
 
 
 int ptu_get_tilt_pos(ptu_handle* h, int* ticks_out) { // TP GET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_TILT_CURRENT_POS_GET, ticks_out);
 }
 
 int ptu_set_tilt_abs(ptu_handle* h,  int ticks) { // TP SET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_TILT_DESIRED_POS_SET, ticks);
 }
@@ -69,6 +73,7 @@ int ptu_set_tilt_abs(ptu_handle* h,  int ticks) { // TP SET
 
 // C, CI, CV
 int ptu_get_control_mode(ptu_handle* h, int* mode_out) { // C
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_SPEED_CONTROL_MODE_GET, mode_out);
 }
@@ -79,20 +84,20 @@ int ptu_get_control_mode(ptu_handle* h, int* mode_out) { // C
 //     }
 
 int ptu_set_velocity_mode(ptu_handle* h) { // CV
+    if (!h) return -1;
     uint16_t status;
     int n = cpi_ptcmd(h->cer, &status, OP_SPEED_CONTROL_MODE_SET, (cpi_enum)CPI_CONTROL_PURE_VELOCITY);
     if (n) {
-        estrap_die("Unable to set velocity mode\n");
         return 1;
     }
     return n;
 }
 
 int ptu_set_position_mode(ptu_handle* h) { // CI
+    if (!h) return -1;
     uint16_t status;
     int n = cpi_ptcmd(h->cer, &status, OP_SPEED_CONTROL_MODE_SET, (cpi_enum)CPI_CONTROL_INDEPENDENT);
     if (n) {
-        estrap_die("Unable to set control mode\n");
         return 1;
     }
     return n;
@@ -104,21 +109,25 @@ int ptu_set_position_mode(ptu_handle* h) { // CI
 
 // PO, TO
 int ptu_get_pan_pos_rel(ptu_handle* h,  int* ticks_out) { // PO GET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_PAN_DESIRED_POS_GET, ticks_out);
 }
 
 int ptu_set_pan_rel(ptu_handle* h,  int ticks) { // PO SET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_PAN_DESIRED_POS_REL_SET, ticks);
 }
 
 int ptu_get_tilt_pos_rel(ptu_handle* h,  int* ticks_out) { // TO GET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_TILT_DESIRED_POS_GET, ticks_out);
 }
 
 int ptu_set_tilt_rel(ptu_handle* h,  int ticks) { // TO SET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_TILT_DESIRED_POS_REL_SET, ticks);
 }
@@ -126,6 +135,7 @@ int ptu_set_tilt_rel(ptu_handle* h,  int ticks) { // TO SET
 
 // A
 int ptu_await(ptu_handle* h) { // A
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_AWAIT, NULL);
 }
@@ -140,6 +150,7 @@ int ptu_await(ptu_handle* h) { // A
 
 // R, RD, RE, RP, RT
 int ptu_reset_home(ptu_handle* h, cpi_reset_type type) { // R, RD, RE, RP, RT
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_RESET, type);
 }
@@ -150,6 +161,7 @@ int ptu_reset_home(ptu_handle* h, cpi_reset_type type) { // R, RD, RE, RP, RT
 // };
 // W
 int ptu_set_step_mode(ptu_handle* h, cpi_stepmode stepmode) {
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_PAN_STEP_SET, stepmode);
 }
@@ -157,18 +169,22 @@ int ptu_set_step_mode(ptu_handle* h, cpi_stepmode stepmode) {
 
 // PS, TS
 int ptu_get_pan_vel(ptu_handle* h,  int* ticks_per_s_out) { // PS GET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_PAN_DESIRED_SPEED_GET, ticks_per_s_out);
 }
 int ptu_set_pan_vel(ptu_handle* h,  int ticks_per_s) { // PS SET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_PAN_DESIRED_SPEED_SET, ticks_per_s);
 }
 int ptu_get_tilt_vel(ptu_handle* h, int* ticks_per_s_out) { // TS GET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_TILT_DESIRED_SPEED_GET, ticks_per_s_out);
 }
 int ptu_set_tilt_vel(ptu_handle* h,  int ticks_per_s) { // TS SET
+    if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_TILT_DESIRED_SPEED_SET, ticks_per_s);
 }

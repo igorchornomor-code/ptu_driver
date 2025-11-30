@@ -64,7 +64,7 @@ Parameters:
 
 Publish period for current PTU pose
 
-Default: 100
+Default: 150
 
 Example:
 
@@ -192,6 +192,19 @@ Example:
 ```
 ros2 service call /set_step_mode ptu_messages/srv/SetStepmode "{step_mode: 1}"
 ```
+
+
+4. Get Step Mode
+
+Service: /get_step_mode
+
+Type: std_srvs/srv/Trigger
+
+Example:
+```
+ros2 service call /get_step_mode std_srvs/srv/Trigger "{}"
+```
+
 
 
 
