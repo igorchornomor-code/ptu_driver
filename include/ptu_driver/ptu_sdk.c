@@ -87,9 +87,6 @@ int ptu_set_velocity_mode(ptu_handle* h) { // CV
     if (!h) return -1;
     uint16_t status;
     int n = cpi_ptcmd(h->cer, &status, OP_SPEED_CONTROL_MODE_SET, (cpi_enum)CPI_CONTROL_PURE_VELOCITY);
-    if (n) {
-        return 1;
-    }
     return n;
 }
 
@@ -97,9 +94,6 @@ int ptu_set_position_mode(ptu_handle* h) { // CI
     if (!h) return -1;
     uint16_t status;
     int n = cpi_ptcmd(h->cer, &status, OP_SPEED_CONTROL_MODE_SET, (cpi_enum)CPI_CONTROL_INDEPENDENT);
-    if (n) {
-        return 1;
-    }
     return n;
 }
 

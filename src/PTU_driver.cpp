@@ -53,7 +53,11 @@ public:
     handler = ptu_open(port.c_str(), &err);
     if (err || handler == NULL)
     {
-      std::cout << "Failed to create connection to " << port.c_str();
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "Failed to create connection to %s",
+        port.c_str()
+      );
       exit(1);
     }
 
@@ -465,9 +469,6 @@ private:
   }
 
 
-
-
-
   void setPositionAbsolute(PositionMsg::SharedPtr msg) {
     int panInSteps = 0;
     int tiltInSteps = 0;
@@ -535,8 +536,6 @@ private:
     }
   }
 
-
-
   void setSpeedAbsolute(PositionMsg::SharedPtr msg) {
     int pan_ticks_per_s = 0;
     int tilt_ticks_per_s = 0;
@@ -569,8 +568,6 @@ private:
       );
     }
   }
-
-
 
 };
 
