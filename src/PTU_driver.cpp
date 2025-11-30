@@ -43,13 +43,15 @@ public:
   PTU_driver()
     : Node("ptu_driver")
   {
-    step_mode = CPI_STEP_HALF;
+    step_mode_pan = CPI_STEP_HALF;
+    step_mode_tilt = CPI_STEP_HALF;
     curPTPosition = { 0, 0 };
     curPTSpeed = {0, 0};
 
     // Trying to connect to PTU
     std::string port = this->declare_parameter("port", "/dev/ttyUSB0");
     int err = 0;
+
     handler = ptu_open(port.c_str(), &err);
     if (err || handler == NULL)
     {
@@ -152,14 +154,8 @@ public:
 
           std::string message;
           switch (mode_out) {
-            case 1: {
-              message = "PTU is in control mode";
-              break;
-            }
-            case 2: {
-              message = "PTU is in velocity mode";
-              break;
-            }
+            case 1: message = "PTU is in independent position mode (CI)"; break;
+            case 2: message = "PTU is in pure velocity mode (CV)"; break;
             default: {
               message = "PTU control mode: " + std::to_string(mode_out);
               break;
@@ -181,17 +177,33 @@ public:
             resp->success = false;
             return;
           }
+          int pan_mode = req->step_mode_pan;
+          int tilt_mode = req->step_mode_tilt;
 
-          step_mode = static_cast<cpi_stepmode>(req->step_mode);
-          if (step_mode < 0 || step_mode > 3) {
-            RCLCPP_ERROR(this->get_logger(), "BAD REQUEST: requested stepmode was %d, but supported are: 0, 1, 2, 3", step_mode);
+          if (pan_mode < 0 || pan_mode > 3) {
+            RCLCPP_ERROR(this->get_logger(), "BAD REQUEST: requested pan stepmode was %d, but supported are: 0, 1, 2, 3", pan_mode);
+            resp->success = false;
+            return;
+          }
+          if (tilt_mode < 0 || tilt_mode > 3) {
+            RCLCPP_ERROR(this->get_logger(), "BAD REQUEST: requested tilt stepmode was %d, but supported are: 0, 1, 2, 3", tilt_mode);
             resp->success = false;
             return;
           }
 
-          int rc = ptu_set_step_mode(handler, step_mode);
+          step_mode_pan = static_cast<cpi_stepmode>(pan_mode);
+          step_mode_tilt = static_cast<cpi_stepmode>(tilt_mode);
+
+          int rc = ptu_set_step_mode_pan(handler, step_mode_pan);
           if (rc != 0) {
-            RCLCPP_ERROR(this->get_logger(), "ptu_set_step_mode failed, rc=%d", rc);
+            RCLCPP_ERROR(this->get_logger(), "ptu_set_step_mode_pan failed, rc=%d", rc);
+            resp->success = false;
+            return;
+          }
+
+          rc = ptu_set_step_mode_tilt(handler, step_mode_tilt);
+          if (rc != 0) {
+            RCLCPP_ERROR(this->get_logger(), "ptu_set_step_mode_tilt failed, rc=%d", rc);
             resp->success = false;
             return;
           }
@@ -253,21 +265,22 @@ private:
   rclcpp::Service<ptu_messages::srv::SetStepmode>::SharedPtr srv_step_mode_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_reset_home_;
 
-  ptu_handle* handler;
-  cpi_stepmode step_mode;
+  ptu_handle* handler{nullptr};
+  cpi_stepmode step_mode_pan;
+  cpi_stepmode step_mode_tilt;
   PTPosition curPTPosition = { 0, 0 };
   PTPosition curPTSpeed = { 0, 0 };
 
   // enum cpi_stepmode {
   //     CPI_STEP_FULL, CPI_STEP_HALF, CPI_STEP_QUARTER, CPI_STEP_AUTO
   // };
-  struct AxisLimits
-  {
-    int pan_min;
-    int pan_max;
-    int tilt_min;
-    int tilt_max;
-  };
+  // struct AxisLimits
+  // {
+  //   int pan_min;
+  //   int pan_max;
+  //   int tilt_min;
+  //   int tilt_max;
+  // };
   enum class Axis {
     PAN,
     TILT
@@ -281,11 +294,11 @@ private:
     *!!! SDK supports only AUTO mode and not eighth mode, but they are technically equivalent
   */
 
-  std::unordered_map<cpi_stepmode, AxisLimits> stepModeLimits = {
-    {CPI_STEP_FULL, {-3499, 3500, -3499, 1166}},
-    {CPI_STEP_HALF, {-6999, 7000, -6999, 2333}},
-    {CPI_STEP_QUARTER, {-13999, 14000, -13996, 4664}},
-    {CPI_STEP_AUTO, {-27999, 28000, -27996, 9332}} };
+  // std::unordered_map<cpi_stepmode, AxisLimits> stepModeLimits = {
+  //   {CPI_STEP_FULL, {-3499, 3500, -3499, 1166}},
+  //   {CPI_STEP_HALF, {-6999, 7000, -6999, 2333}},
+  //   {CPI_STEP_QUARTER, {-13999, 14000, -13996, 4664}},
+  //   {CPI_STEP_AUTO, {-27999, 28000, -27996, 9332}} };
   std::unordered_map<cpi_stepmode, double> panStepSize = {
     {CPI_STEP_FULL, 360.0 / 7000.0},
     {CPI_STEP_HALF, 360.0 / 14000.0},
@@ -305,7 +318,7 @@ private:
   {
     if (axis == Axis::PAN)
     {
-      auto it = panStepSize.find(step_mode);
+      auto it = panStepSize.find(step_mode_pan);
       if (it != panStepSize.end())
       {
         return it->second;
@@ -313,7 +326,7 @@ private:
     }
     else if (axis == Axis::TILT)
     {
-      auto it = tiltStepSize.find(step_mode);
+      auto it = tiltStepSize.find(step_mode_tilt);
       if (it != tiltStepSize.end())
       {
         return it->second;
@@ -322,20 +335,21 @@ private:
 
     RCLCPP_ERROR(
       this->get_logger(),
-      "Invalid axis or step mode: ", axis
+      "Invalid axis or step mode for axis=%d",
+      static_cast<int>(axis)
     );
     return 0.0;
   }
 
   int convertAngleToSteps(double angle, Axis axis)
   {
-    if (axis != Axis::PAN && axis != Axis::PAN)
+    if (axis != Axis::PAN && axis != Axis::TILT)
     {
       RCLCPP_ERROR(
         this->get_logger(),
-        "Invalid axis: ", axis
+        "Invalid axis: %d", static_cast<int>(axis)
       );
-      return 12345678;
+      return 0;
     }
     int steps = round(angle / getStepSize(axis));
     return steps;
@@ -449,7 +463,7 @@ private:
     if (ptu_get_pan_vel(h, &ticks_per_s_out) == 0)
     {
       message.pan = static_cast<double>(ticks_per_s_out);
-      curPTSpeed.pan = message.pan;
+      curPTSpeed.pan = ticks_per_s_out;
     }
     else {
       message.pan = 0.0;
@@ -457,7 +471,7 @@ private:
 
     if (ptu_get_tilt_vel(h, &ticks_per_s_out) == 0) {
       message.tilt = static_cast<double>(ticks_per_s_out);
-      curPTSpeed.tilt = message.tilt;
+      curPTSpeed.tilt = ticks_per_s_out;
     }
     else {
       message.tilt = 0.0;

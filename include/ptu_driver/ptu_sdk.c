@@ -2,6 +2,7 @@
 #include "estrap.h"
 #include <stdlib.h>
 #include <enums.h>
+#include <stdint.h>
 
 struct ptu_handle {
     struct cerial* cer;
@@ -154,10 +155,16 @@ int ptu_reset_home(ptu_handle* h, cpi_reset_type type) { // R, RD, RE, RP, RT
 //     CPI_STEP_FULL, CPI_STEP_HALF, CPI_STEP_QUARTER, CPI_STEP_AUTO
 // };
 // W
-int ptu_set_step_mode(ptu_handle* h, cpi_stepmode stepmode) {
+int ptu_set_step_mode_pan(ptu_handle* h, cpi_stepmode stepmode) { // WP SET
     if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_PAN_STEP_SET, stepmode);
+}
+
+int ptu_set_step_mode_tilt(ptu_handle* h, cpi_stepmode stepmode) { //TP SET
+    if (!h) return -1;
+    uint16_t status;
+    return cpi_ptcmd(h->cer, &status, OP_TILT_STEP_SET, stepmode);
 }
 
 
