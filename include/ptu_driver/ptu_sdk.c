@@ -160,11 +160,20 @@ int ptu_set_step_mode_pan(ptu_handle* h, cpi_stepmode stepmode) { // WP SET
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_PAN_STEP_SET, stepmode);
 }
-
 int ptu_set_step_mode_tilt(ptu_handle* h, cpi_stepmode stepmode) { //TP SET
     if (!h) return -1;
     uint16_t status;
     return cpi_ptcmd(h->cer, &status, OP_TILT_STEP_SET, stepmode);
+}
+int ptu_get_step_mode_pan(ptu_handle* h, cpi_stepmode* stepmode_out) {
+    if (!h) return -1;
+    uint16_t status;
+    return cpi_ptcmd(h->cer, &status, OP_PAN_STEP_GET, stepmode_out);
+}
+int ptu_get_step_mode_tilt(ptu_handle* h, cpi_stepmode* stepmode_out) {
+    if (!h) return -1;
+    uint16_t status;
+    return cpi_ptcmd(h->cer, &status, OP_TILT_STEP_GET, stepmode_out);
 }
 
 

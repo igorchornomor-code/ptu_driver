@@ -42,8 +42,11 @@ int ptu_get_tilt_vel(ptu_handle* h, int* ticks_per_s_out); // TS GET
 int ptu_set_tilt_vel(ptu_handle* h, int ticks_per_s);      // TS GET
 
 // Configuring Step Mode W
-int ptu_set_step_mode_pan(ptu_handle* h, cpi_stepmode stepmode); // WP
-int ptu_set_step_mode_tilt(ptu_handle* h, cpi_stepmode stepmode); // TP
+int ptu_set_step_mode_pan(ptu_handle* h, cpi_stepmode stepmode); // WP SET
+int ptu_set_step_mode_tilt(ptu_handle* h, cpi_stepmode stepmode); // TP SET
+
+int ptu_get_step_mode_pan(ptu_handle* h, cpi_stepmode* stepmode); // WP GET
+int ptu_get_step_mode_tilt(ptu_handle* h, cpi_stepmode* stepmode); // TP GET
 
 
 #ifdef __cplusplus

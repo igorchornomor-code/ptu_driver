@@ -161,7 +161,21 @@ Example:
 ros2 service call /set_control_mode std_srvs/srv/SetBool "{data: true}"
 ```
 
-2. Reset PTU Home
+
+2. Get Control Mode
+
+Service: /get_control_mode
+
+Type: std_srvs/srv/Trigger
+
+Example:
+```
+ros2 service call /get_control_mode std_srvs/srv/Trigger "{}"
+```
+
+
+
+3. Reset PTU Home
 
 Service: /reset_home
 
@@ -173,7 +187,7 @@ Example:
 ros2 service call /reset_home std_srvs/srv/Trigger "{}"
 ```
 
-3. Set Step Mode
+4. Set Step Mode
 
 Service: /set_step_mode
 
@@ -183,7 +197,8 @@ Type: ptu_messages/srv/SetStepmode
 SetStepmode.srv:
 
 ```
-int32 step_mode   # 0=FULL,1=HALF,2=QUARTER,3=AUTO (equivalent to EIGHT)
+int32 step_mode_pan   # 0=FULL,1=HALF,2=QUARTER,3=AUTO (equivalent to EIGHT)
+int32 step_mode_tilt   # 0=FULL,1=HALF,2=QUARTER,3=AUTO (equivalent to EIGHT)
 ---
 bool success
 ```
@@ -193,17 +208,17 @@ Example:
 ros2 service call /set_step_mode ptu_messages/srv/SetStepmode "{step_mode: 1}"
 ```
 
+5. Get Step Mode
 
-4. Get Step Mode
-
-Service: /get_control_mode
+Service: /get_step_mode
 
 Type: std_srvs/srv/Trigger
 
 Example:
 ```
-ros2 service call /get_control_mode std_srvs/srv/Trigger "{}"
+ros2 service call /get_step_mode std_srvs/srv/Trigger "{}"
 ```
+
 
 
 

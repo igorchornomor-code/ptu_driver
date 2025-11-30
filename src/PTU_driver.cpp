@@ -46,7 +46,7 @@ public:
     step_mode_pan = CPI_STEP_HALF;
     step_mode_tilt = CPI_STEP_HALF;
     curPTPosition = { 0, 0 };
-    curPTSpeed = {0, 0};
+    curPTSpeed = { 0, 0 };
 
     // Trying to connect to PTU
     std::string port = this->declare_parameter("port", "/dev/ttyUSB0");
@@ -154,19 +154,19 @@ public:
 
           std::string message;
           switch (mode_out) {
-            case 1: message = "PTU is in independent position mode (CI)"; break;
-            case 2: message = "PTU is in pure velocity mode (CV)"; break;
-            default: {
-              message = "PTU control mode: " + std::to_string(mode_out);
-              break;
-            }
+          case 1: message = "PTU is in independent position mode (CI)"; break;
+          case 2: message = "PTU is in pure velocity mode (CV)"; break;
+          default: {
+            message = "PTU control mode: " + std::to_string(mode_out);
+            break;
+          }
           }
           resp->success = true;
           resp->message = message;
       });
 
 
-    srv_step_mode_ = this->create_service<ptu_messages::srv::SetStepmode>(
+    srv_step_mode_set_ = this->create_service<ptu_messages::srv::SetStepmode>(
       "set_step_mode",
       [this](
         const std::shared_ptr<ptu_messages::srv::SetStepmode::Request> req,
@@ -219,6 +219,49 @@ public:
           resp->success = true;
       });
 
+    srv_step_mode_get_ = this->create_service<std_srvs::srv::Trigger>(
+      "get_step_mode",
+      [this](
+        const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+        std::shared_ptr<std_srvs::srv::Trigger::Response> resp) {
+          (void)req;
+
+          cpi_stepmode pan_mode{};
+          cpi_stepmode tilt_mode{};
+
+          int rc_pan = ptu_get_step_mode_pan(handler, &pan_mode);
+          int rc_tilt = ptu_get_step_mode_tilt(handler, &tilt_mode);
+
+          if (rc_pan != 0 || rc_tilt != 0) {
+            RCLCPP_ERROR(
+              this->get_logger(),
+              "Failed to read step mode: pan_rc=%d, tilt_rc=%d",
+              rc_pan, rc_tilt
+            );
+            resp->success = false;
+            resp->message = "Failed to read step mode from PTU";
+            return;
+          }
+
+          auto mode_to_str = [](cpi_stepmode m) -> std::string {
+            switch (m) {
+            case CPI_STEP_FULL:    return "FULL";
+            case CPI_STEP_HALF:    return "HALF";
+            case CPI_STEP_QUARTER: return "QUARTER";
+            case CPI_STEP_AUTO:    return "AUTO (EIGHTH)";
+            default:               return "UNKNOWN";
+            }
+            };
+
+          std::string msg = "Pan: " + mode_to_str(pan_mode) + " (" + std::to_string(static_cast<int>(pan_mode)) + "), " +
+            "Tilt: " + mode_to_str(tilt_mode) + " (" + std::to_string(static_cast<int>(tilt_mode)) + ")";
+
+          resp->success = true;
+          resp->message = msg;
+      });
+
+
+
 
     srv_reset_home_ = this->create_service<std_srvs::srv::Trigger>(
       "reset_home",
@@ -243,7 +286,7 @@ public:
       ptu_close(handler);
       handler = nullptr;
     }
-  } 
+  }
 
 private:
   struct PTPosition {
@@ -262,10 +305,11 @@ private:
 
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr srv_control_mode_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_control_mode_get_;
-  rclcpp::Service<ptu_messages::srv::SetStepmode>::SharedPtr srv_step_mode_;
+  rclcpp::Service<ptu_messages::srv::SetStepmode>::SharedPtr srv_step_mode_set_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_step_mode_get_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_reset_home_;
 
-  ptu_handle* handler{nullptr};
+  ptu_handle* handler{ nullptr };
   cpi_stepmode step_mode_pan;
   cpi_stepmode step_mode_tilt;
   PTPosition curPTPosition = { 0, 0 };
@@ -288,9 +332,9 @@ private:
   /*
     * ABOUT "eighth" STEP MODE
     * See "E Series ISM Manual_3.21.pdf", page 9
-    * Auto: Internally switches between step modes for optimal movements, but all commands and 
+    * Auto: Internally switches between step modes for optimal movements, but all commands and
     * accuracy are in 1/8 step resolution mode. This mode is recommended for stabilization.
-    * 
+    *
     *!!! SDK supports only AUTO mode and not eighth mode, but they are technically equivalent
   */
 
