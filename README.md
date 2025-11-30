@@ -112,7 +112,7 @@ set_position_absolute (ptu_messages/msg/Position)
 
 Move to an absolute pose (pan/tilt in degrees).
 
-**NaN for an axis → keep its current value** (intended behavior).
+**IMPORTANT: NaN for an axis → keep its current value** (intended behavior).
 
 ```
 set_position_relative (ptu_messages/msg/Position)
@@ -120,7 +120,7 @@ set_position_relative (ptu_messages/msg/Position)
 
 Move by a relative offset (delta pan/tilt in degrees).
 
-**NaN for an axis → 0 offset for that axis** (intended behavior).
+**IMPORTANT: NaN for an axis → 0 offset for that axis** (intended behavior).
 
 
 ## Quick Usage Examples
@@ -183,7 +183,7 @@ Type: ptu_messages/srv/SetStepmode
 SetStepmode.srv:
 
 ```
-int32 step_mode   # 0=FULL,1=HALF,2=QUARTER,3=AUTO
+int32 step_mode   # 0=FULL,1=HALF,2=QUARTER,3=AUTO (equivalent to EIGHT)
 ---
 bool success
 ```

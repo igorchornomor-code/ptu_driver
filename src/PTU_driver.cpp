@@ -45,7 +45,9 @@ public:
   {
     step_mode = CPI_STEP_HALF;
     curPTPosition = { 0, 0 };
+    curPTSpeed = {0, 0};
 
+    // Trying to connect to PTU
     std::string port = this->declare_parameter("port", "/dev/ttyUSB0");
     int err = 0;
     handler = ptu_open(port.c_str(), &err);
@@ -55,6 +57,7 @@ public:
       exit(1);
     }
 
+    // Processing and validating time_interval parameter
     this->declare_parameter<int>("time_interval", 150);
     int time_interval_unchecked = this->get_parameter("time_interval").as_int();
 
@@ -69,17 +72,17 @@ public:
 
     /*
     * -------------------------------------------------
-    * -----------------TOPICS--------------------------
+    * -------------------TOPICS-----------------------
     * -------------------------------------------------
     */
 
     /*
-     * Publisher who publishes current position to the subscriber, printing a corresponding message to the console
      * message Type: Position
      * float 64 pan, float 64 tilt
-     */
+    */
+
     publisher_get_pos_absolute = this->create_publisher<PositionMsg>("get_position_absolute", 10);
-    publisher_get_pos_relative = this->create_publisher<PositionMsg>("get_position_relative", 10);
+    // publisher_get_pos_relative = this->create_publisher<PositionMsg>("get_position_relative", 10);
     publisher_get_speed_absolute = this->create_publisher<PositionMsg>("get_speed_absolute", 10);
 
 
@@ -88,8 +91,8 @@ public:
         auto message1 = getCurrentPosition(handler);
         publisher_get_pos_absolute->publish(message1);
 
-        auto message2 = getPositionRelative(handler);
-        publisher_get_pos_relative->publish(message2);
+        // auto message2 = getPositionRelative(handler);
+        // publisher_get_pos_relative->publish(message2);
 
         auto message3 = getSpeedAbsolute(handler);
         publisher_get_speed_absolute->publish(message3);
@@ -227,7 +230,7 @@ private:
   rclcpp::TimerBase::SharedPtr timer_publish;
 
   rclcpp::Publisher<PositionMsg>::SharedPtr publisher_get_pos_absolute;
-  rclcpp::Publisher<PositionMsg>::SharedPtr publisher_get_pos_relative;
+  // rclcpp::Publisher<PositionMsg>::SharedPtr publisher_get_pos_relative;
   rclcpp::Publisher<PositionMsg>::SharedPtr publisher_get_speed_absolute;
 
   rclcpp::Subscription<PositionMsg>::SharedPtr subscription_set_pos_absolute;
@@ -242,6 +245,7 @@ private:
   ptu_handle* handler;
   cpi_stepmode step_mode;
   PTPosition curPTPosition = { 0, 0 };
+  PTPosition curPTSpeed = { 0, 0 };
 
   // enum cpi_stepmode {
   //     CPI_STEP_FULL, CPI_STEP_HALF, CPI_STEP_QUARTER, CPI_STEP_AUTO
@@ -253,6 +257,16 @@ private:
     int tilt_min;
     int tilt_max;
   };
+
+  /*
+    * ABOUT "eighth" STEP MODE
+    * See "E Series ISM Manual_3.21.pdf", page 9
+    * Auto: Internally switches between step modes for optimal movements, but all commands and 
+    * accuracy are in 1/8 step resolution mode. This mode is recommended for stabilization.
+    * 
+    *!!! SDK supports only AUTO mode and not eighth mode, but they are technically equivalent
+  */
+
   std::unordered_map<cpi_stepmode, AxisLimits> stepModeLimits = {
     {CPI_STEP_FULL, {-3499, 3500, -3499, 1166}},
     {CPI_STEP_HALF, {-6999, 7000, -6999, 2333}},
@@ -416,6 +430,7 @@ private:
     if (ptu_get_pan_vel(h, &ticks_per_s_out) == 0)
     {
       message.pan = static_cast<double>(ticks_per_s_out);
+      curPTSpeed.pan = message.pan;
     }
     else {
       message.pan = 0.0;
@@ -423,6 +438,7 @@ private:
 
     if (ptu_get_tilt_vel(h, &ticks_per_s_out) == 0) {
       message.tilt = static_cast<double>(ticks_per_s_out);
+      curPTSpeed.tilt = message.tilt;
     }
     else {
       message.tilt = 0.0;
@@ -442,21 +458,32 @@ private:
     int tiltInSteps = 0;
 
     if (std::isnan(msg->pan)) {
-      panInSteps = curPTPosition.pan;
+      panInSteps = curPTSpeed.pan;
     }
     else {
       panInSteps = convertAngleToSteps(msg->pan, "pan");
     }
 
     if (std::isnan(msg->tilt)) {
-      tiltInSteps = curPTPosition.tilt;
+      tiltInSteps = curPTSpeed.tilt;
     }
     else {
       tiltInSteps = convertAngleToSteps(msg->tilt, "tilt");
     }
 
-    ptu_set_pan_abs(handler, panInSteps);
-    ptu_set_tilt_abs(handler, tiltInSteps);
+    if (ptu_set_pan_abs(handler, panInSteps) != 0) {
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Failed to set absolute position pan: %.5f!\nProbably the given value is outside the position bounds.", msg->pan
+      );
+    }
+
+    if (ptu_set_tilt_abs(handler, tiltInSteps) != 0) {
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Failed to set absolute position tilt: %.5f!\nProbably the given value is outside the position bounds.", msg->tilt
+      );
+    }
   }
 
   void setPositionRelative(PositionMsg::SharedPtr msg) {
@@ -477,8 +504,20 @@ private:
       tiltInSteps = convertAngleToSteps(msg->tilt, "tilt");
     }
 
-    ptu_set_pan_rel(handler, panInSteps);
-    ptu_set_tilt_rel(handler, tiltInSteps);
+
+    if (ptu_set_pan_rel(handler, panInSteps) != 0) {
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Failed to set relative position pan: %.5f!\nProbably the given value is outside the position bounds.", msg->pan
+      );
+    }
+
+    if (ptu_set_tilt_rel(handler, tiltInSteps) != 0) {
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Failed to set relative position tilt: %.5f!\nProbably the given value is outside the position bounds.", msg->tilt
+      );
+    }
   }
 
 
