@@ -251,7 +251,7 @@ public:
             case CPI_STEP_AUTO:    return "AUTO (EIGHTH)";
             default:               return "UNKNOWN";
             }
-            };
+          };
 
           std::string msg = "Pan: " + mode_to_str(pan_mode) + " (" + std::to_string(static_cast<int>(pan_mode)) + "), " +
             "Tilt: " + mode_to_str(tilt_mode) + " (" + std::to_string(static_cast<int>(tilt_mode)) + ")";
