@@ -200,5 +200,3 @@ ros2 service call /set_step_mode ptu_messages/srv/SetStepmode "{step_mode: 1}"
 The node uses a C wrapper (ptu_sdk.h/.c) around the vendor SDK (libcpi.a, estrap.c).
 
 If the PTU cannot be opened (wrong port, permissions, cable), the node exits at startup.
-
-There is an initial test movement ```(ptu_set_pan_abs(handler, 400);)``` in the constructor; you may remove or parameterize this for production use.

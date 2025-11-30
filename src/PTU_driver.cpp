@@ -55,7 +55,7 @@ public:
       exit(1);
     }
 
-    this->declare_parameter<int>("time_interval", 100);
+    this->declare_parameter<int>("time_interval", 150);
     int time_interval_unchecked = this->get_parameter("time_interval").as_int();
 
     int safe_interval_ms = computeSafeIntervalMs(time_interval_unchecked);
@@ -118,19 +118,19 @@ public:
     */
 
     srv_control_mode_ = this->create_service<std_srvs::srv::SetBool>(
-        "set_control_mode",
-        [this](
+      "set_control_mode",
+      [this](
         const std::shared_ptr<std_srvs::srv::SetBool::Request> req,
         std::shared_ptr<std_srvs::srv::SetBool::Response> resp) {
-            if (req->data) ptu_set_velocity_mode(handler);
-            else           ptu_set_position_mode(handler);
-            resp->success = true;
-        });
+          if (req->data) ptu_set_velocity_mode(handler);
+          else           ptu_set_position_mode(handler);
+          resp->success = true;
+      });
 
-    
+
     srv_control_mode_get_ = this->create_service<std_srvs::srv::Trigger>(
-        "get_control_mode",
-        [this](
+      "get_control_mode",
+      [this](
         const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
         std::shared_ptr<std_srvs::srv::Trigger::Response> resp) {
           (void)req;
@@ -145,66 +145,77 @@ public:
 
           std::string message;
           switch (mode_out) {
-              case 1: {
-                message = "PTU is in control mode";
-                break;
-              }
-              case 2: {
-                message = "PTU is in velocity mode";
-                break;
-              }
-              default: {
-                message = "PTU control mode: " + std::to_string(mode_out);
-                break;
-              }
+          case 1: {
+            message = "PTU is in control mode";
+            break;
+          }
+          case 2: {
+            message = "PTU is in velocity mode";
+            break;
+          }
+          default: {
+            message = "PTU control mode: " + std::to_string(mode_out);
+            break;
+          }
           }
           resp->success = true;
           resp->message = message;
-        });
+      });
 
 
-  srv_step_mode_ = this->create_service<ptu_messages::srv::SetStepmode>(
-    "set_step_mode",
-    [this](
+    srv_step_mode_ = this->create_service<ptu_messages::srv::SetStepmode>(
+      "set_step_mode",
+      [this](
         const std::shared_ptr<ptu_messages::srv::SetStepmode::Request> req,
         std::shared_ptr<ptu_messages::srv::SetStepmode::Response> resp) {
 
-        if (!handler) {
-          RCLCPP_ERROR(this->get_logger(), "set_step_mode called with null handler");
-          resp->success = false;
-          return;
-        }
+          if (!handler) {
+            RCLCPP_ERROR(this->get_logger(), "set_step_mode called with null handler");
+            resp->success = false;
+            return;
+          }
 
-        step_mode = static_cast<cpi_stepmode>(req->step_mode);
+          step_mode = static_cast<cpi_stepmode>(req->step_mode);
+          if (step_mode < 0 || step_mode > 3) {
+            RCLCPP_ERROR(this->get_logger(), "BAD REQUEST: requested stepmode %d, but supported are: 0, 1, 2, 3", step_mode);
+            resp->success = false;
+            return;
+          }
 
-        int rc = ptu_set_step_mode(handler, step_mode);
-        if (rc != 0) {
-          RCLCPP_ERROR(this->get_logger(), "ptu_set_step_mode failed, rc=%d", rc);
-          resp->success = false;
-          return;
-        }
+          int rc = ptu_set_step_mode(handler, step_mode);
+          if (rc != 0) {
+            RCLCPP_ERROR(this->get_logger(), "ptu_set_step_mode failed, rc=%d", rc);
+            resp->success = false;
+            return;
+          }
 
-        rc = ptu_reset_home(handler, CPI_RESET_ALL);
-        if (rc != 0) {
-          RCLCPP_ERROR(this->get_logger(), "ptu_reset_home failed, rc=%d", rc);
-          resp->success = false;
-          return;
-        }
+          rc = ptu_reset_home(handler, CPI_RESET_ALL);
+          if (rc != 0) {
+            RCLCPP_ERROR(this->get_logger(), "ptu_reset_home failed, rc=%d", rc);
+            resp->success = false;
+            return;
+          }
 
-        rc = ptu_await(handler);
-        resp->success = true;
-    });
+          rc = ptu_await(handler);
+          resp->success = true;
+      });
 
 
     srv_reset_home_ = this->create_service<std_srvs::srv::Trigger>(
-        "reset_home",
-        [this](
-            const std::shared_ptr<std_srvs::srv::Trigger::Request> ,
-            std::shared_ptr<std_srvs::srv::Trigger::Response> resp) {
-            ptu_reset_home(handler, CPI_RESET_ALL);
-            ptu_await(handler);
-            resp->success = true;
-        });
+      "reset_home",
+      [this](
+        const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+        std::shared_ptr<std_srvs::srv::Trigger::Response> resp) {
+          int rc = ptu_reset_home(handler, CPI_RESET_ALL);
+          if (rc != 0) {
+            RCLCPP_ERROR(this->get_logger(), "ptu_reset_home failed, rc=%d", rc);
+            resp->success = false;
+            return;
+          }
+
+          rc = ptu_await(handler);
+          resp->success = true;
+      });
 
   }
 
@@ -214,7 +225,7 @@ private:
     int tilt;
   };
   rclcpp::TimerBase::SharedPtr timer_publish;
-  
+
   rclcpp::Publisher<PositionMsg>::SharedPtr publisher_get_pos_absolute;
   rclcpp::Publisher<PositionMsg>::SharedPtr publisher_get_pos_relative;
   rclcpp::Publisher<PositionMsg>::SharedPtr publisher_get_speed_absolute;
@@ -324,9 +335,9 @@ private:
       this->get_logger(),
       "GET REQUEST DONE IN %ld ms", duration_ms
     );
-    
 
-    long long min_interval_ms_ll = static_cast<long long>(std::ceil(duration_ms * 1.5));
+
+    long long min_interval_ms_ll = static_cast<long long>(std::ceil(duration_ms * 1.2));
     int min_interval_ms = static_cast<int>(min_interval_ms_ll);
 
     if (requested_ms < min_interval_ms) {
@@ -353,14 +364,16 @@ private:
     {
       curPTPosition.pan = ticks;
       message.pan = static_cast<double>(ticks);
-    } else {
+    }
+    else {
       message.pan = 0.0;
     }
 
     if (ptu_get_tilt_pos(h, &ticks) == 0) {
       curPTPosition.tilt = ticks;
       message.tilt = static_cast<double>(ticks);
-    } else {
+    }
+    else {
       message.tilt = 0.0;
     }
 
@@ -378,13 +391,15 @@ private:
     if (ptu_get_pan_pos_rel(h, &ticks) == 0)
     {
       message.pan = static_cast<double>(ticks);
-    } else {
+    }
+    else {
       message.pan = 0.0;
     }
 
     if (ptu_get_tilt_pos_rel(h, &ticks) == 0) {
       message.tilt = static_cast<double>(ticks);
-    } else {
+    }
+    else {
       message.tilt = 0.0;
     }
 
@@ -401,13 +416,15 @@ private:
     if (ptu_get_pan_vel(h, &ticks_per_s_out) == 0)
     {
       message.pan = static_cast<double>(ticks_per_s_out);
-    } else {
+    }
+    else {
       message.pan = 0.0;
     }
 
     if (ptu_get_tilt_vel(h, &ticks_per_s_out) == 0) {
       message.tilt = static_cast<double>(ticks_per_s_out);
-    } else {
+    }
+    else {
       message.tilt = 0.0;
     }
 
@@ -487,14 +504,14 @@ private:
     if (ptu_set_pan_vel(handler, pan_ticks_per_s) != 0) {
       RCLCPP_INFO(
         this->get_logger(),
-        "Failed to set pan speed: %.5f! \nProbably the given value is outside the speed bounds.", msg->pan
+        "Failed to set pan speed: %.5f!\nProbably the given value is outside the speed bounds.", msg->pan
       );
     }
 
     if (ptu_set_tilt_vel(handler, tilt_ticks_per_s) != 0) {
       RCLCPP_INFO(
         this->get_logger(),
-        "Failed to set tilt speed: %.5f! \nProbably the given value is outside the speed bounds.", msg->tilt
+        "Failed to set tilt speed: %.5f!\nProbably the given value is outside the speed bounds.", msg->tilt
       );
     }
   }
